@@ -38,6 +38,9 @@ func _input(event) -> void:
 	if !viewport_camera:
 		return
 
+	if !_is_mouse_in_3d_viewport():
+		return
+
 	var sensitivity = base_sensitivity
 
 	# print("Event: ", event)
@@ -78,7 +81,7 @@ func _input(event) -> void:
 				is_panning = false
 				is_zooming = false
 			else:
-				# alt key handles normal pivoting
+				# alt key must be pressed down
 				if event.alt_pressed:
 					var offset = viewport_camera.global_position - pivot_point
 					yaw = atan2(offset.x, offset.z)
@@ -87,16 +90,18 @@ func _input(event) -> void:
 					is_orbiting = true
 					is_panning = false
 					is_zooming = false
-				if event.shift_pressed:
-					_spawn_pivot_point_and_catch_mouse()
-					is_panning = true
-					is_orbiting = false
-					is_zooming = false
-				if event.ctrl_pressed:
-					_spawn_pivot_point_and_catch_mouse()
-					is_zooming = true
-					is_orbiting = false
-					is_panning = false
+
+					if event.shift_pressed:
+						_spawn_pivot_point_and_catch_mouse()
+						is_panning = true
+						is_orbiting = false
+						is_zooming = false
+
+					if event.ctrl_pressed:
+						_spawn_pivot_point_and_catch_mouse()
+						is_zooming = true
+						is_orbiting = false
+						is_panning = false
 
 		if event.button_index == MOUSE_BUTTON_MIDDLE and \
 		   event.alt_pressed and \
@@ -184,3 +189,9 @@ func _get_pivot_under_mouse() -> Vector3:
 		return selected[0].global_position
 
 	return pivot_point
+
+func _is_mouse_in_3d_viewport() -> bool:
+	var viewport = get_editor_interface().get_editor_viewport_3d(0)
+	var mouse_pos = viewport.get_mouse_position()
+	var rect = viewport.get_visible_rect()
+	return rect.has_point(mouse_pos)
