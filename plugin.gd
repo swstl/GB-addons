@@ -23,7 +23,7 @@ var pitch: float = 0.0
 
 func _enter_tree():
 	print("Plugin new loaded!")
-	var viewport = get_editor_interface().get_editor_viewport_3d(0)
+	var viewport = EditorInterface.get_editor_viewport_3d(0)
 	viewport_camera = viewport.get_camera_3d()
 
 	if viewport_camera:
@@ -119,6 +119,7 @@ func _input(event) -> void:
 			# distance since last event
 			var delta = event.relative
 			var offset = viewport_camera.global_position - pivot_point
+			var up: Vector3 = Vector3.ZERO
 
 			if is_zooming:
 				viewport_camera.global_position += offset.normalized() * delta.y * sensitivity * 10
@@ -128,7 +129,7 @@ func _input(event) -> void:
 
 			if is_panning:
 				var right = viewport_camera.global_transform.basis.x
-				var up = viewport_camera.global_transform.basis.y
+				up = viewport_camera.global_transform.basis.y
 				var new_sensitivity = base_sensitivity * (viewport_camera.global_position - pivot_point).length()
 
 				viewport_camera.global_position += (-right * delta.x + up * delta.y) * new_sensitivity
@@ -148,8 +149,7 @@ func _input(event) -> void:
 				cos(yaw) * cos(pitch)
 			) * distance
 
-			var up = Vector3.UP if cos(pitch) >= 0 else Vector3.DOWN
-
+			up = Vector3.UP if cos(pitch) >= 0 else Vector3.DOWN
 			viewport_camera.global_position = pivot_point + new_offset
 			viewport_camera.look_at(pivot_point, up)
 
@@ -171,7 +171,7 @@ func _spawn_pivot_point_and_catch_mouse():
 
 
 func _get_pivot_under_mouse() -> Vector3:
-	var viewport = get_editor_interface().get_editor_viewport_3d(0)
+	var viewport = EditorInterface.get_editor_viewport_3d(0)
 	var mouse_pos = viewport.get_mouse_position()
 
 	var from = viewport_camera.project_ray_origin(mouse_pos)
@@ -184,14 +184,14 @@ func _get_pivot_under_mouse() -> Vector3:
 	if result:
 		return result.collider.global_position
 
-	var selected = get_editor_interface().get_selection().get_selected_nodes()
+	var selected = EditorInterface.get_selection().get_selected_nodes()
 	if selected.size() > 0 and selected[0] is Node3D:
 		return selected[0].global_position
 
 	return pivot_point
 
 func _is_mouse_in_3d_viewport() -> bool:
-	var viewport = get_editor_interface().get_editor_viewport_3d(0)
+	var viewport = EditorInterface.get_editor_viewport_3d(0)
 	var mouse_pos = viewport.get_mouse_position()
 	var rect = viewport.get_visible_rect()
 	return rect.has_point(mouse_pos)
