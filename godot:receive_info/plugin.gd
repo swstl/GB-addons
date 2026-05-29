@@ -1,9 +1,8 @@
-@tool
-extends EditorPlugin
+@tool extends EditorPlugin
 
 var viewport_camera : Camera3D = null
 var mouse_down: bool = false
-var pivot_point: Vector3 = Vector3.ZERO 
+var pivot_point: Vector3 = Vector3.ZERO
 var alt_down: bool = false
 var ctrl_down: bool = false
 var shift_down: bool = false
@@ -20,6 +19,11 @@ var is_zooming: bool = false
 var yaw: float = 0.0
 var pitch: float = 0.0
 
+# # 2D viewport state
+# var canvas_item_editor = null
+# var canvas_mouse_down: bool = false
+# var canvas_is_panning: bool = false
+#
 
 func _enter_tree():
 	print("Plugin new loaded!")
@@ -31,10 +35,34 @@ func _enter_tree():
 	else:
 		print("No camera found in the editor viewport.")
 
+	call_deferred("_find_canvas_item_editor")
+
+# func _find_canvas_item_editor():
+	# canvas_item_editor = _find_node_by_class(EditorInterface.get_base_control(), "CanvasItemEditor")
+
 func _exit_tree():
 	print("Plugin new unloaded!")
 
+# func _find_node_by_class(node: Node, target_class: String) -> Node:
+# 	if node.get_class() == target_class:
+# 		return node
+# 	for child in node.get_children():
+# 		var result = _find_node_by_class(child, target_class)
+# 		if result:
+# 			return result
+# 	return null
+#
 func _input(event) -> void:
+	if event is InputEventKey and event.pressed and event.keycode == KEY_ESCAPE:
+		if mouse_down:
+			mouse_down = false
+			Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+			is_orbiting = false
+			is_panning = false
+			is_zooming = false
+			_mark_handeled()
+		return
+
 	if !viewport_camera:
 		return
 
@@ -158,6 +186,58 @@ func _input(event) -> void:
 	else:
 		if event is InputEventMouseMotion and event.alt_pressed:
 			_mark_handeled()
+
+# func _forward_canvas_gui_input(event: InputEvent) -> bool:
+# 	if event is InputEventMouseButton:
+# 		match event.button_index:
+# 			MOUSE_BUTTON_WHEEL_UP:
+# 				_canvas_zoom(event.position, 1.1)
+# 				return true
+# 			MOUSE_BUTTON_WHEEL_DOWN:
+# 				_canvas_zoom(event.position, 1.0 / 1.1)
+# 				return true
+# 			MOUSE_BUTTON_LEFT:
+# 				canvas_mouse_down = event.pressed
+# 				if event.pressed and event.alt_pressed:
+# 					canvas_is_panning = true
+# 					Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
+# 					return true
+# 				elif not event.pressed and canvas_is_panning:
+# 					canvas_is_panning = false
+# 					Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+# 					return true
+# 			MOUSE_BUTTON_MIDDLE:
+# 				if event.pressed and event.alt_pressed:
+# 					# Reset to 1:1 zoom, keeping mouse position centered
+# 					var vp = EditorInterface.get_editor_viewport_2d()
+# 					var ct: Transform2D = vp.canvas_transform
+# 					var mouse_canvas = ct.affine_inverse() * event.position
+# 					var new_ct = Transform2D.IDENTITY
+# 					new_ct.origin = event.position - mouse_canvas
+# 					vp.canvas_transform = new_ct
+# 					return true
+#
+# 	if event is InputEventMouseMotion:
+# 		if canvas_is_panning and canvas_mouse_down:
+# 			var vp = EditorInterface.get_editor_viewport_2d()
+# 			var ct: Transform2D = vp.canvas_transform
+# 			ct.origin += event.relative
+# 			vp.canvas_transform = ct
+# 			return true
+# 		if event.alt_pressed and canvas_mouse_down:
+# 			return true
+#
+# 	return false
+#
+# func _canvas_zoom(mouse_pos: Vector2, factor: float) -> void:
+# 	var vp = EditorInterface.get_editor_viewport_2d()
+# 	var ct: Transform2D = vp.canvas_transform
+# 	var old_scale: float = ct.get_scale().x
+# 	var new_scale: float = clamp(old_scale * factor, 0.01, 100.0)
+# 	var mouse_canvas: Vector2 = ct.affine_inverse() * mouse_pos
+# 	var new_ct: Transform2D = Transform2D.IDENTITY.scaled(Vector2(new_scale, new_scale))
+# 	new_ct.origin = mouse_pos - new_ct.basis_xform(mouse_canvas)
+# 	vp.canvas_transform = new_ct
 
 func _mark_handeled():
 	get_viewport().set_input_as_handled()
