@@ -63,6 +63,11 @@ func handle_input(event: InputEvent) -> bool:
 					return _begin(Op.SCALE)
 				KEY_R:
 					return _begin(Op.ROTATE)
+				KEY_X:
+					return _delete_selected()
+				KEY_D:
+					if k.shift_pressed:
+						return _duplicate_and_grab()
 	return false
 
 
@@ -127,9 +132,12 @@ func _handle_active(event: InputEvent) -> bool:
 
 
 func _begin(op: int) -> bool:
+	return _begin_with(op, _selected_node3ds())
+
+
+func _begin_with(op: int, sel: Array) -> bool:
 	if not _is_mouse_in_3d_viewport():
 		return false
-	var sel := _selected_node3ds()
 	if sel.is_empty():
 		return false
 	var cam := _get_camera()
@@ -346,3 +354,85 @@ func _is_mouse_in_3d_viewport() -> bool:
 	if vp == null:
 		return false
 	return vp.get_visible_rect().has_point(vp.get_mouse_position())
+
+
+# --- X = delete, Shift+D = duplicate & grab --------------------------------
+
+func _delete_selected() -> bool:
+	if not _is_mouse_in_3d_viewport() or undo_redo == null:
+		return false
+	var root := EditorInterface.get_edited_scene_root()
+	var nodes := _editable_selection(root)
+	if nodes.is_empty():
+		return false
+
+	# custom_context = root pins this to the scene's undo history (the do/undo
+	# targets are this RefCounted, which otherwise wouldn't resolve a history).
+	undo_redo.create_action("Delete (Blender bridge)", UndoRedo.MERGE_DISABLE, root)
+	for n in nodes:
+		var node: Node = n
+		undo_redo.add_do_method(self, "_remove_node", node)
+		undo_redo.add_undo_method(self, "_restore_node", node, node.get_parent(), node.get_index(), node.owner)
+		undo_redo.add_undo_reference(node)
+	undo_redo.commit_action()
+	return true
+
+
+func _duplicate_and_grab() -> bool:
+	if not _is_mouse_in_3d_viewport() or undo_redo == null:
+		return false
+	var root := EditorInterface.get_edited_scene_root()
+	var nodes := _editable_selection(root)
+	if nodes.is_empty():
+		return false
+
+	var dups: Array = []
+	undo_redo.create_action("Duplicate (Blender bridge)", UndoRedo.MERGE_DISABLE, root)
+	for n in nodes:
+		var node: Node = n
+		var dup := node.duplicate()
+		undo_redo.add_do_method(self, "_add_node", dup, node.get_parent(), root)
+		undo_redo.add_do_reference(dup)
+		undo_redo.add_undo_method(self, "_remove_node", dup)
+		dups.append(dup)
+	undo_redo.commit_action()  # creates the duplicates
+
+	# Reselect the duplicates, then immediately start moving them.
+	var es := EditorInterface.get_selection()
+	es.clear()
+	for d in dups:
+		es.add_node(d)
+	_begin_with(Op.MOVE, dups)
+	return true
+
+
+# Selected Node3Ds that can be edited (have a parent and aren't the root).
+func _editable_selection(root: Node) -> Array:
+	var out: Array = []
+	for n in EditorInterface.get_selection().get_selected_nodes():
+		if n is Node3D and n != root and n.get_parent() != null:
+			out.append(n)
+	return out
+
+
+func _add_node(node: Node, parent: Node, owner: Node) -> void:
+	parent.add_child(node)
+	_set_owner_recursive(node, owner)
+
+
+func _remove_node(node: Node) -> void:
+	var parent := node.get_parent()
+	if parent != null:
+		parent.remove_child(node)
+
+
+func _restore_node(node: Node, parent: Node, index: int, owner: Node) -> void:
+	parent.add_child(node)
+	_set_owner_recursive(node, owner)
+	parent.move_child(node, index)
+
+
+func _set_owner_recursive(node: Node, owner: Node) -> void:
+	node.owner = owner
+	for child in node.get_children():
+		_set_owner_recursive(child, owner)
