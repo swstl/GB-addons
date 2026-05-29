@@ -35,6 +35,9 @@ shared_state = {
     "invert_zoom_mouse": False,
     "invert_zoom_wheel": False,
     "rotate_method": "TURNTABLE",          # "TURNTABLE" or "TRACKBALL"
+    "auto_depth": False,                    # orbit/zoom around surface under cursor
+    "smooth_view": 200,                     # view-transition duration in ms
+    "spacebar_search": False,               # Spacebar Action == "SEARCH"
 }
 
 # Remember the last state we printed so we only log on change.
@@ -65,6 +68,13 @@ def _poll_settings():
     shared_state["invert_zoom_mouse"] = getattr(i, "invert_mouse_zoom", False)
     shared_state["invert_zoom_wheel"] = getattr(i, "invert_zoom_wheel", False)
     shared_state["rotate_method"] = getattr(i, "view_rotate_method", "TURNTABLE")
+    shared_state["auto_depth"] = getattr(i, "use_mouse_depth_navigate", False)
+    # smooth_view lives under preferences.view (a duration in milliseconds).
+    shared_state["smooth_view"] = getattr(bpy.context.preferences.view, "smooth_view", 200)
+    # Spacebar Action lives on the active keyconfig's preferences.
+    kc = bpy.context.window_manager.keyconfigs.active
+    kc_prefs = getattr(kc, "preferences", None) if kc else None
+    shared_state["spacebar_search"] = getattr(kc_prefs, "spacebar_action", "PLAY") == "SEARCH"
 
     if shared_state != _last_printed:
         print(f"[GodotBridge] emulate_3_button = {shared_state['emulate_3_button']}")

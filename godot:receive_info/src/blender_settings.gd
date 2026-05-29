@@ -15,6 +15,9 @@ var orbit_around_selection := false    # orbit around selected node vs free pivo
 var invert_zoom_mouse := false         # invert drag-zoom direction
 var invert_zoom_wheel := false         # invert wheel-zoom direction
 var rotate_method := "TURNTABLE"       # "TURNTABLE" or "TRACKBALL"
+var auto_depth := false                # orbit/zoom pivot on surface under cursor
+var smooth_view_ms := 200.0            # view-transition duration (ms; 0 = instant)
+var spacebar_search := false           # Blender's Spacebar Action == "SEARCH"
 
 
 # Copy values out of the raw dict from Blender, falling back to defaults.
@@ -26,3 +29,6 @@ func apply(d: Dictionary) -> void:
 	invert_zoom_mouse = d.get("invert_zoom_mouse", false)
 	invert_zoom_wheel = d.get("invert_zoom_wheel", false)
 	rotate_method = d.get("rotate_method", "TURNTABLE")
+	auto_depth = d.get("auto_depth", false)
+	smooth_view_ms = d.get("smooth_view", 200.0)
+	spacebar_search = d.get("spacebar_search", false)
